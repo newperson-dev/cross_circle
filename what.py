@@ -49,31 +49,38 @@ class TrackElementDetector:
         return False
 
     def detect_roundabout(self):
-        """检测圆环（前方大面积黑色障碍物）"""
-        # 取图像下半部分（近处）作为分析区
-        roi = self.binary[self.h*2//3:, :]
+        """检测圆环（黑色障碍物被白色赛道包围）"""
+        # 取图像下半部分作为 ROI
+        roi = self.binary[self.h // 2:, :]
         h_roi, w_roi = roi.shape
 
-        # 寻找中心区域最大黑色连通宽度
-        center_col = w_roi // 2
-        max_black_width = 0
-        for r in range(h_roi-10, -1, -1):       # 从下往上扫描
-            left, right = center_col, center_col
-            while left > 0 and not roi[r, left]:
-                left -= 1
-            while right < w_roi-1 and not roi[r, right]:
-                right += 1
-            width = right - left
-            if width > max_black_width:
-                max_black_width = width
+        max_inner_black_width = 0
+        black_region_valid = False  # 标记是否找到符合要求的黑块
+        for r in range(h_roi):
+            c = 0
+            while c < w_roi:
+                if not roi[r, c]:  # 遇到黑色像素
+                    start = c
+                    while c < w_roi and not roi[r, c]:
+                        c += 1
+                    end = c - 1
+                    # 检查左右是否紧邻白色像素（确保不是背景边缘）
+                    left_has_white = (start > 0) and roi[r, start - 1]
+                    right_has_white = (end < w_roi - 1) and roi[r, end + 1]
+                    if left_has_white and right_has_white:
+                        width = end - start + 1
+                        if width > max_inner_black_width:
+                            max_inner_black_width = width
+                            black_region_valid = True
+                else:
+                    c += 1
 
-        # 圆环判定：中心黑块宽度 > 图像宽度的 30%
-        if max_black_width > 0.3 * w_roi:
-            # 同时两侧必须有白色赛道
-            left_region = roi[:, :w_roi//4]
-            right_region = roi[:, 3*w_roi//4:]
-            if np.any(left_region) and np.any(right_region):
-                return True
+        ratio = max_inner_black_width / w_roi if w_roi > 0 else 0
+        print(f"   [调试] ROI尺寸=({h_roi},{w_roi}), 内部最大黑宽={max_inner_black_width}, 比例={ratio:.2f}")
+
+        # 判定条件：存在内部黑宽 > 5% 图像宽度，且该黑块左右确实有白色（已在扫描中保证）
+        if black_region_valid and max_inner_black_width > 0.05 * w_roi:
+            return True
         return False
 
     def run(self):

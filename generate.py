@@ -63,7 +63,7 @@ def generate_all_test_images(w,h,track_width=100,r_c_y=100,ring_radius=130):
     # 圆环（正确版本）
     img3 = create_base_canvas(w, h)
     draw3 = ImageDraw.Draw(img3)
-    draw_roundabout_track(draw3, w, h, track_width, ring_radius=200, r_c_y=r_c_y)
+    draw_roundabout_track(draw3, w, h, track_width, ring_radius, r_c_y=r_c_y)
     img3.save("pic/track_roundabout.png")
     print("✅ track_roundabout.png (内圆与直道右侧相切)")
 
